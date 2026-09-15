@@ -1,0 +1,246 @@
+<!doctype html>
+<!-- template.html — esqueleto de página scroll-story (estilo página de produto) · proto-demo v1
+     Troque: os capítulos (ano gigante, etiqueta, frase), os objetos 3D (funções *Tex e os grupo()),
+     a manchete do final e a cor --acc. A matemática de rolagem e o layout ficam.
+     Arquitetura: canvas Three.js fixo ao fundo + seções DOM (hero 100vh, capítulos 220vh, finale 260vh).
+     Texto à esquerda (sticky), objeto à direita; o último objeto recentra e a câmera entra na tela dele. -->
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Produto · home</title>
+<style>
+:root{
+  --bg:#0a0a0c; --fg:#f5f4f0; --mut:#8a8a93; --acc:#e8b04a;
+  --chip:rgba(232,176,74,.16); --line:rgba(245,244,240,.1);
+}
+@media (prefers-color-scheme: light){
+  :root{ --bg:#f2f1ec; --fg:#141419; --mut:#6b6b74; --acc:#b07a1e; --chip:rgba(176,122,30,.12); --line:rgba(20,20,25,.12); }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font-family:-apple-system,"SF Pro Display","SF Pro Text",Inter,system-ui,sans-serif;overflow-x:hidden}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+main{position:relative;z-index:1}
+.hero{height:100vh}
+.ch{height:220vh}
+.fin{height:260vh}
+.blk{position:sticky;top:16vh;max-width:620px;padding:0 8vw;will-change:transform,opacity}
+.ano{font-size:clamp(110px,20vw,240px);font-weight:700;letter-spacing:-.05em;line-height:.92;color:var(--fg)}
+.tag{display:block;margin:18px 0 10px;font-size:14px;font-weight:600;letter-spacing:.32em;text-transform:uppercase;color:var(--acc)}
+.frase{font-size:clamp(20px,2.6vw,26px);line-height:1.45;color:var(--mut);max-width:460px}
+.hero .blk{position:sticky;top:0;height:100vh;max-width:none;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:0 6vw}
+.hero h1{font-size:clamp(44px,7vw,92px);font-weight:700;letter-spacing:-.035em;line-height:1.02}
+.hero .tag{margin:26px 0 14px}
+.hero .frase{max-width:560px}
+.chev{margin-top:7vh;width:22px;height:22px;border-left:2px solid var(--acc);border-bottom:2px solid var(--acc);transform:rotate(-45deg);animation:desce 1.7s ease-in-out infinite}
+@keyframes desce{0%,100%{transform:rotate(-45deg) translate(0,0)}50%{transform:rotate(-45deg) translate(-7px,7px)}}
+#dentro{position:fixed;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:0 7vw;opacity:0;pointer-events:none;background:radial-gradient(120% 90% at 50% 10%,rgba(232,176,74,.09),transparent 55%),color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(10px)}
+#dentro .tag{margin:0 0 18px}
+#dentro h2{font-size:clamp(30px,4.4vw,46px);font-weight:650;letter-spacing:-.03em;line-height:1.14;max-width:760px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:34px}
+.chip{font-size:15px;color:var(--fg);border:1px solid var(--line);background:var(--chip);border-radius:999px;padding:9px 16px}
+#dentro .quem{margin-top:40px;font-size:17px;font-weight:600}
+#dentro .site{margin-top:6px;font-size:15px;color:var(--mut)}
+#dentro>*{opacity:0;transform:translateY(14px);transition:opacity .55s ease,transform .55s ease}
+#dentro.on>*{opacity:1;transform:none}
+#dentro.on>:nth-child(2){transition-delay:.12s}
+#dentro.on>:nth-child(3){transition-delay:.24s}
+#dentro.on>:nth-child(4){transition-delay:.36s}
+#dentro.on>:nth-child(5){transition-delay:.48s}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<main>
+  <section class="hero"><div class="blk">
+    <h1>Nome do Produto</h1>
+    <span class="tag">Categoria</span>
+    <p class="frase">A promessa em uma linha, legível de cara.</p>
+    <div class="chev"></div>
+  </div></section>
+  <section class="ch"><div class="blk">
+    <div class="ano">1964</div><span class="tag">Primeiro objeto</span>
+    <p class="frase">Uma frase que dá o argumento do capítulo.</p>
+  </div></section>
+  <section class="ch"><div class="blk">
+    <div class="ano">1978</div><span class="tag">Segundo objeto</span>
+    <p class="frase">Outro argumento, uma coisa só por vez.</p>
+  </div></section>
+  <section class="ch"><div class="blk">
+    <div class="ano">2026</div><span class="tag">Objeto final</span>
+    <p class="frase">O argumento que fecha a história.</p>
+  </div></section>
+  <section class="fin"></section>
+</main>
+<div id="dentro">
+  <span class="tag">Dentro do objeto final</span>
+  <h2>A manchete: o que o produto entrega, em uma frase inteira.</h2>
+  <div class="chips">
+    <span class="chip">pilar um</span>
+    <span class="chip">pilar dois</span>
+    <span class="chip">pilar três</span>
+  </div>
+  <div><p class="quem">Nome do Produto</p><p class="site">produto.exemplo</p></div>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+
+const dark = !window.matchMedia('(prefers-color-scheme: light)').matches;
+const BG = new THREE.Color(dark ? 0x0a0a0c : 0xf2f1ec);
+const ACC = new THREE.Color(0xe8b04a);
+
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('gl'), antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+renderer.setClearColor(BG);
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(BG, 7, 15);
+const cam = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, .1, 40);
+const CAM0 = new THREE.Vector3(0, .15, 7.0);
+const CAMZ = new THREE.Vector3(0, .12, 2.62);
+cam.position.copy(CAM0);
+
+scene.add(new THREE.AmbientLight(0xffffff, dark ? .5 : .85));
+const key = new THREE.DirectionalLight(0xffffff, dark ? 1.6 : 1.15); key.position.set(3, 5, 4); scene.add(key);
+const rim = new THREE.PointLight(ACC, dark ? 70 : 10, 20, 2); rim.position.set(0, 1.7, -3.2); scene.add(rim);
+
+function tex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; return t;
+}
+function telaTex() {
+  return tex(640, 400, (g, w, h) => {
+    g.fillStyle = '#0b0c10'; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(232,176,74,.8)'; g.lineWidth = 4; g.strokeRect(10, 10, w - 20, h - 20);
+    const bolha = (x, y, lw, mim) => {
+      g.fillStyle = mim ? 'rgba(232,176,74,.85)' : 'rgba(245,244,240,.85)';
+      (g.roundRect || g.fillRect).call(g, x, y, lw, 46, 14); g.fill();
+    };
+    bolha(40, 60, 300, false); bolha(w - 360, 130, 320, true); bolha(40, 200, 250, false);
+    bolha(w - 320, 270, 280, true); bolha(40, 340, 180, false);
+  });
+}
+function objetoTex() {
+  return tex(512, 336, (g, w, h) => {
+    g.fillStyle = '#e6d9ba'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#2c2a24';
+    for (let col = 0; col < 12; col++) for (let row = 0; row < 6; row++) {
+      g.beginPath(); g.arc(34 + col * 38, 58 + row * 38, 9, 0, 7); g.fill();
+    }
+  });
+}
+function objeto2Tex() {
+  return tex(512, 384, (g, w, h) => {
+    g.fillStyle = '#03130a'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#37d67e'; g.font = '600 25px monospace';
+    ['READY.', '', 'LOGIN: PRODUTO', 'CONECTADO', '', 'RUN DEMO'].forEach((l, i) => g.fillText(l, 28, 62 + i * 46));
+  });
+}
+
+const objs = [];
+function grupo(build) { const g = new THREE.Group(); build(g); g.visible = false; scene.add(g); objs.push(g); return g; }
+
+grupo(g => {
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(2.7, 1.77, .07),
+    new THREE.MeshStandardMaterial({ map: objetoTex(), roughness: .85, metalness: .05 })));
+});
+grupo(g => {
+  const shell = new THREE.MeshStandardMaterial({ color: 0xd8cfba, roughness: .7 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.1, 1.9), shell); body.position.y = -.1; g.add(body);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(1.92, 1.4), new THREE.MeshBasicMaterial({ map: objeto2Tex() }));
+  scr.position.set(0, .12, .96); g.add(scr);
+});
+const ultimo = grupo(g => {
+  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(.85, 1),
+    new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: .25, metalness: .5, emissive: ACC, emissiveIntensity: .38 }));
+  g.add(core);
+  for (const [r, rx, ry] of [[1.5, 1.35, .3], [1.78, 1.1, -.5]]) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r, .016, 8, 90),
+      new THREE.MeshBasicMaterial({ color: ACC, transparent: true, opacity: .75 }));
+    ring.rotation.set(rx, ry, 0); g.add(ring);
+  }
+  const dots = [];
+  const dm = new THREE.MeshBasicMaterial({ color: 0xf5f4f0 });
+  for (let i = 0; i < 34; i++) {
+    const d = new THREE.Mesh(new THREE.SphereGeometry(.03, 8, 8), i % 3 ? dm : new THREE.MeshBasicMaterial({ color: ACC }));
+    d.userData = { r: 1.7 + Math.random() * .6, sp: .25 + Math.random() * .4, ph: Math.random() * 7, tilt: Math.random() * 1.2 - .6 };
+    dots.push(d); g.add(d);
+  }
+  g.userData.dots = dots;
+  const tela = new THREE.Mesh(new THREE.PlaneGeometry(1.55, .97), new THREE.MeshBasicMaterial({ map: telaTex() }));
+  tela.position.set(0, .1, 1.55); g.add(tela);
+});
+
+const secs = [...document.querySelectorAll('section')];
+const heroEl = secs[0], dentro = document.getElementById('dentro');
+let CH = [], finS = 0, maxS = 1;
+function medir() {
+  CH = secs.slice(1, -1).map(el => ({ s: el.offsetTop, e: el.offsetTop + el.offsetHeight - innerHeight }));
+  finS = CH[CH.length - 1].e; maxS = Math.max(document.body.scrollHeight - innerHeight, finS + 1);
+}
+medir();
+const ease = t => 1 - Math.pow(1 - t, 3);
+const easeIn = t => t * t * t;
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp01 = t => Math.min(1, Math.max(0, t));
+
+let mx = 0, my = 0, smx = 0, smy = 0, dentroOn = false;
+addEventListener('pointermove', e => { mx = e.clientX / innerWidth * 2 - 1; my = e.clientY / innerHeight * 2 - 1; });
+addEventListener('resize', () => { cam.aspect = innerWidth / innerHeight; cam.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); medir(); });
+renderer.setSize(innerWidth, innerHeight);
+
+function frame(now) {
+  const t = now / 1000, y = scrollY;
+  smx = lerp(smx, mx, .06); smy = lerp(smy, my, .06);
+  heroEl.querySelector('.blk').style.opacity = 1 - ease(clamp01(y / (innerHeight * .8)));
+
+  const oT = CH.map(c => (y - c.s) / (c.e - c.s));
+  const f = clamp01((y - finS) / (maxS - finS));
+  const zoom = ease(clamp01((f - .05) / .6));
+  objs.forEach((g, i) => {
+    const s = oT[i];
+    const ultimo_ = i === objs.length - 1;
+    g.visible = s > -.3 && (ultimo_ || s < 1.3);
+    if (!g.visible) return;
+    let x = 1.7, ry = 0, sc = 1;
+    if (s < .2) { const e = ease(clamp01((s + .3) / .5)); x = lerp(4.6, 1.7, e); ry = lerp(1.0, 0, e); sc = lerp(.55, 1, e); }
+    else if (!ultimo_ && s > .8) { const e = easeIn(clamp01((s - .8) / .5)); x = lerp(1.7, -3.6, e); ry = lerp(0, -1.0, e); sc = lerp(1, .55, e); }
+    if (ultimo_ && f > 0) x = lerp(1.7, 0, zoom);
+    g.position.set(x, Math.sin(t * .8 + i * 2) * .05, 0);
+    g.rotation.set(Math.sin(t * .5 + i) * .03, ry + smx * .3, 0);
+    g.scale.setScalar(sc);
+    if (g.userData.dots) for (const d of g.userData.dots) {
+      const u = d.userData, a = t * u.sp + u.ph;
+      d.position.set(u.r * Math.cos(a), u.r * Math.sin(a) * Math.sin(u.tilt) + .1, u.r * Math.sin(a) * Math.cos(u.tilt));
+    }
+  });
+
+  cam.position.set(
+    lerp(CAM0.x + smx * .35 * (1 - zoom), CAMZ.x, zoom),
+    lerp(CAM0.y - smy * .22 * (1 - zoom), CAMZ.y, zoom),
+    lerp(CAM0.z, CAMZ.z, zoom));
+  cam.lookAt(0, .1, lerp(0, 1.55, zoom));
+
+  dentro.style.opacity = clamp01((f - .55) / .23);
+  if (!dentroOn && f > .68) { dentroOn = true; dentro.classList.add('on'); }
+  if (dentroOn && f < .4) { dentroOn = false; dentro.classList.remove('on'); }
+
+  secs.slice(1, -1).forEach((el, i) => {
+    const s = oT[i], b = el.querySelector('.blk');
+    let o = 0, ty = 30;
+    if (s < 0) { o = 0; }
+    else if (s < .1) { const e = ease(s / .1); o = e; ty = lerp(30, 0, e); }
+    else if (s < .9) { o = 1; ty = 0; }
+    else { const e = easeIn(clamp01(s)); o = 1 - e; ty = lerp(0, -26, e); }
+    b.style.opacity = o; b.style.transform = `translateY(${ty}px)`;
+  });
+
+  renderer.render(scene, cam);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
