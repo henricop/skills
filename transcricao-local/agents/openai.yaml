@@ -1,0 +1,3 @@
+interface:
+  display_name: "Transcrição local"
+  short_description: "Áudios e vídeos em texto, com timestamps e resumos"
