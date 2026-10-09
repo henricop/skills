@@ -2,61 +2,33 @@
 
 Skills pessoais do Henrico Piubello Neves — [henricop](https://github.com/henricop).
 
-Cada pasta é uma skill: `SKILL.md` (método) + scripts/modelos de apoio.
+Cada skill é uma pasta com:
+
+- `SKILL.md`: o método que o agente segue (é o arquivo que o agente carrega);
+- `README.md`: escopo, requisitos, instalação e uso, para quem está lendo este repositório;
+- scripts, modelos e referências de apoio.
 
 ## Índice
 
-| Skill | O que faz |
-|---|---|
-| [proto-demo](proto-demo/) | Protótipo de página scroll-story + vídeo demo gravado (MP4, pôster, contact sheet), com validação programática. |
-| [transcricao-local](transcricao-local/) | Transcrição local de áudio e da fala de vídeos, com timestamps; resumos de mensagens, reuniões e aulas conforme o pedido. |
+| Skill | O que faz | Use quando | Fora do escopo |
+|---|---|---|---|
+| [mergedev](mergedev/) | Integra as PRs abertas do GitHub na branch atual, uma por vez e na ordem certa (PR empilhada depois da mãe), resolvendo conflitos sem perder alteração de nenhum lado e documentando cada decisão no commit. | "mergeia as PRs do time na dev", "fecha o lote", várias PRs abertas para integrar antes de testar ou publicar. | Push, fechar PR, apagar branch (ficam com você); revisão de código; rebase interativo. |
+| [proto-demo](proto-demo/) | Protótipo de página scroll-story (capítulos ao rolar, objeto 3D, final que entra numa tela) e o vídeo demo gravado dele, com pôster e contact sheet, validados programaticamente. | "protótipo da home + vídeo", "grava a página rodando", decisão de design que precisa de evidência em vídeo antes do código real. | O site de produção; QA de site existente; edição de vídeo além do corte. |
+| [transcricao-local](transcricao-local/) | Transcreve áudios e a fala de vídeos na própria máquina (ffmpeg + whisper.cpp), com timestamps, e entrega transcrição, síntese ou resumo de reunião/aula conforme o pedido. | "transcreve", "o que diz esse áudio?", "resume a reunião/aula", mensagens de voz do WhatsApp. | Imagens e slides do vídeo; identificar quem fala; resumir texto já transcrito. |
+
+Os requisitos de cada uma (gh, Playwright, whisper.cpp...) estão no README da pasta.
 
 ## Instalação
 
-Copie (ou clone com sparse-checkout) a pasta da skill para `~/.claude/skills/` (Claude Code)
-ou o equivalente do seu agente:
+Copie a pasta da skill para `~/.claude/skills/` (Claude Code) ou o equivalente do seu
+agente. Um symlink mantém a cópia atualizada com o clone:
 
 ```bash
 git clone https://github.com/henricop/skills.git
-cp -r skills/proto-demo skills/transcricao-local ~/.claude/skills/
+cd skills
+for s in mergedev proto-demo transcricao-local; do ln -s "$PWD/$s" ~/.claude/skills/$s; done
 ```
 
-### proto-demo
-
-Instale as dependências **dentro da pasta da skill**
-(o `import('playwright')` dos scripts resolve a partir de onde eles estão):
-
-```bash
-cd ~/.claude/skills/proto-demo && npm i playwright && npx playwright install chromium
-```
-
-(ffmpeg e Node 18+ no PATH.)
-
-### transcricao-local
-
-```bash
-brew install ffmpeg whisper-cpp
-```
-
-Requer Python 3.9+. Na primeira vez, baixe o modelo (cerca de 574 MB, uma vez só)
-testando com o áudio sintético de exemplo:
-
-```bash
-cd ~/.claude/skills/transcricao-local
-python3 scripts/transcrever.py --baixar-modelo "exemplo/WhatsApp Ptt 2026-10-02 at 09.12.44.ogg"
-```
-
-Mande o caminho de um áudio ou vídeo e indique a entrega:
-
-- **“Transcreve”**: texto completo com timestamps e trechos incertos.
-- **“O que diz esse áudio?”**: síntese dos pontos principais e pedidos explícitos.
-- **“Resume a reunião”**: assuntos, decisões, tarefas e questões em aberto.
-- **“Resume a aula”**: temas e explicações principais.
-
-O reconhecimento roda na própria máquina com whisper.cpp; a mídia não é enviada a
-uma API. O texto transcrito entra no contexto do assistente. O download inicial do
-modelo usa a rede.
-
-Veja o [exemplo de resumo](transcricao-local/exemplo/resumo.md). Os timestamps permitem
-localizar o trecho original, e correções incertas ficam sinalizadas como hipóteses.
-Use `--salvar` para guardar TXT e SRT ou `--saida PASTA` para escolher o destino.
+Depois siga o "Requisitos" do README de cada skill:
+[mergedev](mergedev/README.md) · [proto-demo](proto-demo/README.md) ·
+[transcricao-local](transcricao-local/README.md).

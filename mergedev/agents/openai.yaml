@@ -1,0 +1,3 @@
+interface:
+  display_name: "Merge dev"
+  short_description: "Integra as PRs abertas do time na branch atual, resolvendo conflitos sem perder trabalho"
